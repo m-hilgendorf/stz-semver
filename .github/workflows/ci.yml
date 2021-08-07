@@ -1,11 +1,12 @@
 name: Build and Test
 on: push
 jobs:
-  runs-on: ubuntu-latest
-  steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-    - name: Install Stanza
-      run: ./bootstrap.sh
-    - name: Run Tests
-      run: stanza-modules/stanza/stanza run-test src/semver.stanza
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install Stanza
+        run: ./bootstrap.sh
+      - name: Run Tests
+        run: stanza-modules/stanza/stanza run-test src/semver.stanza
