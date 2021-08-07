@@ -1,0 +1,127 @@
+;==================================================================================================
+; Semantic Versioning
+;==================================================================================================
+#use-added-syntax(tests)
+defpackage semver:
+  import core
+  import collections
+
+defstruct StringIsNotSemver <: Exception:
+  str:String,
+
+; A Semver is a semantic version, with major, minor, and patch versions. Optionally, 
+; it may have "prerelease" and "build" strings, which are alphanumeric and dot separated.
+public defstruct Semver <: Comparable<Semver>&Equalable:
+  major:Int, 
+  minor:Int,
+  patch:Int,
+  prerelease?:False|String
+  build?:False|String,
+
+defmethod compare (l:Semver, r:Semver) -> Int:
+  label<Int> return:
+    for op in [major, minor, patch] do:
+      val cmp = compare(op(l), op(r))
+      if cmp != 0:
+        return(cmp)
+    0
+
+defmethod equal? (l:Semver, r:Semver) -> True|False:
+  label<True|False> return:
+    for op in [major, minor, patch, prerelease?, build?] do:
+      if op(l) != op(r):
+        return(false)
+    true
+
+;==================================================================================================
+; Main parsing algorithm
+;==================================================================================================
+public defn Semver (major:Int, minor:Int, patch:Int):
+  Semver(major, minor, patch, false, false)
+
+public defn Semver (major:Int, minor:Int, patch:Int, prerelease?:String):
+  Semver(major, minor, patch, prerelease?, false)
+
+public defn Semver? (version-string:String) -> False|Semver:
+  var str: String = version-string
+
+  var major?:False|Int = false
+  var minor?:False|Int = false
+  var patch?:False|Int = false
+  var prerelease?:False|String = false
+  var build?:False|String = false
+  
+  defn next-int? () -> False|Int:
+    val idx = index-of-char(str, '.')
+    match(idx:Int):
+      val out = to-int(str[0 to idx])
+      str = str[(idx + 1) to false]
+      out
+    
+  let loop ():
+    if length(str) > 0:
+      if major? is False:
+        major? = next-int?()
+        loop()
+      else if minor? is False:
+        minor? = next-int?()
+        loop()
+      else:
+        val idx- = index-of-char(str, '-') 
+        val idx+ = index-of-char(str, '+')
+        patch? = to-int $ {str[0 to _]} $
+          if idx- is False: idx+
+          else if idx- is Int: idx-
+          else: 
+            false
+        match(idx-:Int):
+          prerelease? = str[(idx- + 1) to idx+]
+        match(idx+:Int):
+          build? = str[(idx+ + 1) to false]
+
+  if major? is False or minor? is False or patch? is False:
+    false
+  else:
+    Semver(major? as Int, minor? as Int, patch? as Int, prerelease?, build?)
+
+public defn Semver (s:String): 
+  match(Semver?(s)):
+    (_:False):  throw(StringIsNotSemver(s))
+    (v:Semver): v
+  
+;==================================================================================================
+; Printer
+;==================================================================================================
+defmethod print (o:OutputStream, v:Semver):
+  print(o, "%_.%_.%_" % [major(v), minor(v), patch(v)])
+  if prerelease?(v) is String:
+    print(o, "-%_" % [prerelease?(v)])
+  if build?(v) is String:
+    print(o, "+%_" % [build?(v)])
+
+defmethod print (o:OutputStream, s:StringIsNotSemver):
+  print(o, "%_ is not a valid semver." % [s])
+
+;==================================================================================================
+; Unit Tests
+;==================================================================================================
+deftest semver-to-string:
+  #EXPECT(to-string(Semver(1, 2, 3, false, false)) == "1.2.3")
+  #EXPECT(to-string(Semver(1, 2, 3, false, "beta")) == "1.2.3+beta")
+  #EXPECT(to-string(Semver(1, 2, 3, "alpha", false)) == "1.2.3-alpha")
+  #EXPECT(to-string(Semver(1, 2, 3, "alpha", "beta")) == "1.2.3-alpha+beta")
+  #EXPECT(to-string(Semver(1, 2, 3)) == "1.2.3")
+
+deftest string-to-semver:
+  #EXPECT(to-string(Semver?("1.2.3")) == "1.2.3")
+  #EXPECT(to-string(Semver?("1.2.3-alpha")) == "1.2.3-alpha")
+  #EXPECT(to-string(Semver?("1.2.3+beta")) == "1.2.3+beta")
+  #EXPECT(to-string(Semver?("1.2.3-alpha+beta")) == "1.2.3-alpha+beta")
+
+deftest semver-comparison:
+  #EXPECT(Semver("1.2.3") < Semver("2.3.1"))
+  #EXPECT(Semver("1.2.3") > Semver("0.1.2"))
+  #EXPECT(Semver("1.2.3") <= Semver("1.2.3-rc1+nightly"))
+  #EXPECT(Semver("1.2.3") >= Semver("1.2.0"))
+  #EXPECT(Semver("1.2.3") != Semver("1.2.3-rc1"))
+  #EXPECT(Semver("1.2.3-alpha") == Semver("1.2.3-alpha"))

@@ -1,0 +1,6 @@
+/build
+/stanza-modules
+/.stanza
+/.envrc
+/.vscode
+pending.*.dat
