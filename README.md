@@ -1,3 +1,4 @@
+[![Build and Test](https://github.com/m-hilgendorf/stz-semver/actions/workflows/ci.yml/badge.svg)](https://github.com/m-hilgendorf/stz-semver/actions/workflows/ci.yml)
 # Semantic Version Parsing 
 ## In Stanza!
 ## Usage
