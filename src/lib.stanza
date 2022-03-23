@@ -1,13 +1,10 @@
-;==================================================================================================
-; Semantic Versioning
-;==================================================================================================
 #use-added-syntax(tests)
 defpackage semver:
   import core
   import collections
 
 defstruct StringIsNotSemver <: Exception:
-  str:String,
+  str:String
 
 ; A Semver is a semantic version, with major, minor, and patch versions. Optionally, 
 ; it may have "prerelease" and "build" strings, which are alphanumeric and dot separated.
@@ -36,13 +33,16 @@ defmethod equal? (l:Semver, r:Semver) -> True|False:
 ;==================================================================================================
 ; Main parsing algorithm
 ;==================================================================================================
+doc: "Create a [Semver] object from major, minor, and patch values."
 public defn Semver (major:Int, minor:Int, patch:Int):
   Semver(major, minor, patch, false, false)
 
+doc: "Create a [Semver] object from major, minopr, patch, and pre-release values."
 public defn Semver (major:Int, minor:Int, patch:Int, prerelease?:String):
   Semver(major, minor, patch, prerelease?, false)
 
-public defn Semver? (version-string:String) -> False|Semver:
+doc: "Attempt to parse a [Semver] object from a string."
+protected defn parse? (version-string:String) -> False|Semver:
   var str: String = version-string
 
   var major?:False|Int = false
@@ -84,10 +84,17 @@ public defn Semver? (version-string:String) -> False|Semver:
   else:
     Semver(major? as Int, minor? as Int, patch? as Int, prerelease?, build?)
 
-public defn Semver (s:String): 
-  match(Semver?(s)):
-    (_:False):  throw(StringIsNotSemver(s))
-    (v:Semver): v
+doc: "Parse a semver from a string, throwing an exception if it fails."
+protected defn parse (s:String) -> Semver : 
+  match(parse?(s)):
+    (_:False)  : throw(StringIsNotSemver(s))
+    (v:Semver) : v
+
+doc: "Parse a semver from a string, failing if it is invalid."
+protected defn parse! (s:String) -> Semver :
+  match(parse?(s)) : 
+    (_:False)  : fatal(StringIsNotSemver(s))
+    (v:Semver) : v
   
 ;==================================================================================================
 ; Printer
@@ -113,15 +120,16 @@ deftest semver-to-string:
   #EXPECT(to-string(Semver(1, 2, 3)) == "1.2.3")
 
 deftest string-to-semver:
-  #EXPECT(to-string(Semver?("1.2.3")) == "1.2.3")
-  #EXPECT(to-string(Semver?("1.2.3-alpha")) == "1.2.3-alpha")
-  #EXPECT(to-string(Semver?("1.2.3+beta")) == "1.2.3+beta")
-  #EXPECT(to-string(Semver?("1.2.3-alpha+beta")) == "1.2.3-alpha+beta")
+  #EXPECT(to-string(parse?("1.2.3")) == "1.2.3")
+  #EXPECT(to-string(parse?("1.2.3-alpha")) == "1.2.3-alpha")
+  #EXPECT(to-string(parse?("1.2.3+beta")) == "1.2.3+beta")
+  #EXPECT(to-string(parse?("1.2.3-alpha+beta")) == "1.2.3-alpha+beta")
 
 deftest semver-comparison:
-  #EXPECT(Semver("1.2.3") < Semver("2.3.1"))
-  #EXPECT(Semver("1.2.3") > Semver("0.1.2"))
-  #EXPECT(Semver("1.2.3") <= Semver("1.2.3-rc1+nightly"))
-  #EXPECT(Semver("1.2.3") >= Semver("1.2.0"))
-  #EXPECT(Semver("1.2.3") != Semver("1.2.3-rc1"))
-  #EXPECT(Semver("1.2.3-alpha") == Semver("1.2.3-alpha"))
+  #EXPECT(parse("1.2.3")       <  parse("2.3.1"))
+  #EXPECT(parse("1.2.3")       >  parse("0.1.2"))
+  #EXPECT(parse("1.2.3")       <= parse("1.2.3-rc1+nightly"))
+  #EXPECT(parse("1.2.3")       >= parse("1.2.0"))
+  #EXPECT(parse("1.2.3")       != parse("1.2.3-rc1"))
+  #EXPECT(parse("1.2.3-alpha") == parse("1.2.3-alpha"))
+  

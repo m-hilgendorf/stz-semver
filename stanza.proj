@@ -1,5 +1,5 @@
-package semver defined-in "src/semver.stanza"
-build-test test-semver:
+include "src/stanza.proj"
+
+build-test test-semver :
   inputs: semver
-  o: "build/bin/test-semver"
-  pkg: "build/pkg"
+  o: "tests"

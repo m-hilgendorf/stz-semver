@@ -7,6 +7,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Install Stanza
-        run: ./bootstrap.sh
+        run: ./scripts/install-stanza.sh
       - name: Run Tests
-        run: stanza-modules/stanza/stanza run-test src/semver.stanza
+        run: stanza-0.15.12/stanza run-test semver
